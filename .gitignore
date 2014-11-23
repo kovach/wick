@@ -1,0 +1,5 @@
+*.swp
+*.hi
+*.o
+node_modules/
+*.script

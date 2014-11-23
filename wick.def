@@ -1,0 +1,2 @@
+pandoc →index.md -o index.tex→
+pandoc -s --katex →index.tex -o index.html→
