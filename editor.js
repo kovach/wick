@@ -5,8 +5,14 @@ var done = true;
 var curs = require('./diff');
 
 // Global state
+var editor;
 var old_content;
 var ws;
+
+var setCurrentValue = function(str) {
+  old_content = str;
+  editor.setValue(str);
+}
 
 var tabKeyBinding = function(cm) {
   var spaces = Array(cm.getOption("indentUnit") + 1).join(" ");
@@ -28,6 +34,18 @@ var rollbackKeyBinding = function(cm) {
   cm.setValue(new_content);
   cm.setCursor(new_pos);
 }
+var applyDiff = function(patch) {
+  var str = editor.getValue();
+  if (str === old_content) {
+    var new_content = d.applyPatch(str, patch);
+    var changes = d.diffLines(old_content, new_content);
+    var new_pos = curs.locateCursor(editor, changes);
+    setCurrentValue(new_content);
+    editor.setCursor(new_pos);
+  } else {
+    console.log('error CONFLICT');
+  }
+}
 var sendKeyBinding = function(cm) {
   if (ws) {
     var data = diffKeyBinding(cm);
@@ -41,14 +59,6 @@ var sendKeyBinding = function(cm) {
   }
 }
 
-var changeType = function(change) {
-  if (change.added)
-    return 'added';
-  else if (change.removed)
-    return 'removed';
-  else
-    return 'same';
-}
 var extraKeys = {
   Tab: tabKeyBinding,
   'Ctrl-Enter': sendKeyBinding,
@@ -57,7 +67,7 @@ var extraKeys = {
 
 var makeMirror = function(id, socket) {
   ws = socket;
-  var editor =
+  editor =
     CodeMirror.fromTextArea(
       document.getElementById(id),
       { value: "function myScript(){return 100;}\n",
@@ -74,6 +84,19 @@ var makeMirror = function(id, socket) {
   return editor;
 }
 
+var handler = function(message) {
+  var msg = JSON.parse(message.data);
+  switch (msg.tag) {
+    case 'diff':
+      applyDiff(msg.data);
+      break;
+    case 'read':
+      setCurrentValue(msg.data);
+      break;
+  }
+}
+
 module.exports = {
   makeMirror: makeMirror,
+  handler: handler,
 }

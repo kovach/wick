@@ -4,8 +4,11 @@ var fs = require('fs');
 var express = require('express');
 var http = require('http');
 
+var touchFile = function(file_path) {
+  fs.appendFile(file_path, '');
+}
 
-var sendFile = function(res, page) {
+var writeFile = function(res, page) {
   fs.readFile(__dirname + '/' + page, {encoding: 'utf8'},
       function (err, data) {
         if (err) {
@@ -17,42 +20,26 @@ var sendFile = function(res, page) {
       });
 }
 
-var pair = function(a, b) {
-  return {pattern: a, handler: b};
+var readPage = function(page, callback) {
+  var file_path = __dirname + '/pages/' + page;
+  // Create if not existent
+  console.log(file_path);
+  touchFile(file_path);
+  fs.readFile(file_path, {encoding: 'utf8'},
+      function(err, page_data) {
+        if (err) {
+          console.log(err);
+        } else {
+          callback(page_data);
+        }
+      });
 }
-var routes = [
-  pair(/^\/page\/(\w*)$/, function(page) {
-    // Open edit page for 'page'
-    this.writeHead(200);
-    this.end('wiki page: ' + page);
-  }),
-  pair(/^\/cm\/((?:\w|\/)\.?\w*)$/, function(file) {
-    sendFile(this, file);
-  }),
-  pair(/^\/$/, function() {
-    sendFile(this, 'test.html');
-  }),
-  pair(/^\/(\w*\.?\w*)$/, function(page) {
-    sendFile(this, page);
-  }),
-  ];
 
-//var handler = function (req, res) {
-//  var success =
-//    _.find(routes, function(pair) {
-//      var match = req.url.match(pair.pattern);
-//      if (match) {
-//        pair.handler.apply(res, match.slice(1));
-//        return true;
-//      }
-//    });
-//  if (!success) {
-//    res.writeHead(404);
-//    res.end('404');
-//  }
-//}
+var sendmsg = function(ws, obj) {
+  ws.send(JSON.stringify(obj));
+}
 
-var clients = [];
+var clients = {};
 var add_client = function(ws) {
   var id = _.uniqueId();
   clients[id] = {ws: ws};
@@ -61,9 +48,7 @@ var add_client = function(ws) {
 var start_server = function() {
   var app = express();
   app.get('/page/:page', function(req, res) {
-    // TODO load editor.html, set content, ???
-    console.log('page');
-    res.send(req.params.page);
+    writeFile(res, 'editor.html');
   });
   app.use(express.static('.'));
   var server = http.createServer(app);
@@ -73,18 +58,32 @@ var start_server = function() {
   wss.on('connection', function(ws) {
     var id = add_client(ws);
     console.log('connection: ', id);
+
+    ws.on('close', function() {
+      console.log('closing: ', id);
+      delete clients[id];
+    });
+
     ws.on('message', function(message) {
       var msg = JSON.parse(message);
       switch (msg.tag) {
         case 'diff':
           console.log('DIFF');
           console.log(msg.data);
+          _.each(clients, function(client, id2) {
+            if (id !== id2) {
+              client.ws.send(message);
+            }
+          });
+          break;
+        case 'read':
+          console.log('READ');
+          readPage(msg.data, function(data) {
+            sendmsg(ws, {tag: 'read', data: data});
+          })
           break;
       }
     });
   });
 }
 start_server();
-
-//var app = require('http').createServer(handler); app.listen(4444);
-

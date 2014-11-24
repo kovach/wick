@@ -1,3 +1,16 @@
+var _ = require('underscore');
+var doWhile = _.find;
+var done = true;
+
+var changeType = function(change) {
+  if (change.added)
+    return 'added';
+  else if (change.removed)
+    return 'removed';
+  else
+    return 'same';
+}
+
 // Positions the cursor after a diff is applied
 var locateCursor = function(cm, changes) {
   var current_pos = cm.getCursor();
