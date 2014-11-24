@@ -1,2 +1,2 @@
 ./parse →wick.def wick.script→
-node →main.js →wick.script
+node →run.js →wick.script
