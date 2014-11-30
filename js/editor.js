@@ -14,6 +14,7 @@ var old_content;
 var prev_diff;
 var ws;
 var current_page;
+var current_workspace;
 
 var updateWithFile = function(data) {
   editor.setValue(data.body);
@@ -39,6 +40,8 @@ var updateWithDiff = function(data) {
   } else {
     console.log('INVALID DIFF');
     // TODO request current file value
+    // TODO distinguish between different file/wrong file value:
+    //       (see server.js id2 line)
   }
 }
 
@@ -58,6 +61,10 @@ var sendDiff = function(cm) {
   if (ws) {
     var content = cm.getValue();
     var patch = makeDiff(content);
+    if (!current_workspace) {
+      console.log('you are editing an invalid file or workspace!');
+      return;
+    }
     if (patch) {
       var msg = {
         tag: 'diff',

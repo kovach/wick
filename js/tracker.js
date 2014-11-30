@@ -91,7 +91,7 @@ mkTracker.prototype.current = function(name) {
 mkTracker.prototype.readHead = function(name) {
   var index = this;
   if (!index.fileCheck(name)) {
-    console.log("name doesn't exist: ", name);
+    console.log("tracker.js:readHead. name doesn't exist: ", name);
     return;
   }
 

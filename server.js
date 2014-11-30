@@ -82,7 +82,12 @@ var readWorkingFile = function(index, name) {
   if (!index.fileCheck(name)) {
     var content = global_index.readHead(name);
     if (content) {
+      // TODO this should 'checkout' the file's history
       index.commitFile(name, content);
+    } else {
+      // File doesn't exist in global_index
+      // TODO create file?
+      return;
     }
   }
   return index.readHead(name);
@@ -99,8 +104,8 @@ var sendWorkspaceView = function(ws, index, key, name) {
           workspace: key,
       }});
     } else {
-      // TODO handle missing file
-      // create new file?
+      // TODO handle missing file (probably in readWorkingFile)
+      // return anti-ack
     }
   } else {
     // TODO render default workspace view
@@ -139,6 +144,7 @@ var handleDiff = function(id, ws, data, msg) {
 
       // Distribute diff
       _.each(clients, function(client, id2) {
+        // TODO check to see if client is on same file?
         if (id !== id2) {
           console.log('SENDING: ', id2);
           sendmsg(client.ws, msg);
