@@ -1,23 +1,25 @@
-var fs = require('fs');
-var _ = require('underscore');
-var d = require('diff');
-var sha256_ = require('crypto-js/sha256');
+// TODO reimplement using git?
+//
+// A simple content-addressed diff-based file index
 
-var sha256 = function(str) {
-  return sha256_(str).toString();
-}
-
-var emptyHash = sha256('');
-
-// Directory layout
-// root
-//   {names}
-//   .wick
+// directory layout:
+// root/
+//   .wick/
 //     files/
 //       'name': [contents = head ref]]
 //     diffs/
 //       'ref': [contents = prev ref/unified diff]
 
+var fs = require('fs');
+var _ = require('underscore');
+var d = require('diff');
+var sha256_ = require('crypto-js/sha256');
+var digest = require('./digest');
+
+var sha256 = digest.sha256;
+var emptyHash = digest.emptyHash;
+
+// TODO make members
 var wickDir = function(root) {
   return root + '/.wick/';
 }
@@ -35,14 +37,8 @@ var initIndex = function(root) {
   fs.writeFile(diffDir(root) + emptyHash, '');
 }
 
-var initFile = function(index, name) {
-  var ref = emptyHash;
-  fs.writeFile(fileDir(index.root)+name, ref);
-  index.files[name] = ref;
-}
-
 var opt = {encoding: 'utf8'};
-var buildIndex = function(root) {
+var mkTracker = function(root) {
   var files_prefix = fileDir(root);
   var file_names = fs.readdirSync(files_prefix);
   var files = {};
@@ -68,22 +64,38 @@ var buildIndex = function(root) {
     }
     diffs[diff_ref] = {prev: prev, patch: patch};
   });
-  return {root: root, files: files, diffs: diffs};
+  this.root = root;
+  this.files = files;
+  this.diffs = diffs;
 }
 
-var assert = function(bool, str) {
-  if (!bool) {
-    throw ('error: ', str);
+mkTracker.prototype.fileCheck = function(name) {
+  var index = this;
+  if (index.files[name]) {
+    return true;
   }
+  return false;
+}
+
+mkTracker.prototype.initFile = function(name) {
+  var index = this;
+  var ref = emptyHash;
+  fs.writeFile(fileDir(index.root)+name, ref);
+  index.files[name] = ref;
+}
+mkTracker.prototype.current = function(name) {
+  return this.files[name];
 }
 
 // Follow diff chain
-var readHead = function(index, name) {
-  var head = index.files[name];
-  if (head === undefined) {
+mkTracker.prototype.readHead = function(name) {
+  var index = this;
+  if (!index.fileCheck(name)) {
     console.log("name doesn't exist: ", name);
     return;
   }
+
+  var head = index.current(name);
   var patches = [];
   var ref = head;
   while (index.diffs[ref].prev !== undefined) {
@@ -92,7 +104,6 @@ var readHead = function(index, name) {
   }
   patches.reverse();
 
-  console.log(patches);
   var str = "";
   _.each(patches, function(patch) {
     str = d.applyPatch(str, patch);
@@ -109,8 +120,9 @@ var parseDiff = function(diff) {
 }
 
 // Calculate diff, commit
-var commitFile = function(index, name, str) {
-  var prev_str = readHead(index, name);
+mkTracker.prototype.commitFile = function(name, str) {
+  var index = this;
+  var prev_str = index.readHead(name);
   var prev_hash = index.files[name];
   if (str === prev_str) {
     console.log('no change from index: ', name);
@@ -129,11 +141,16 @@ var commitFile = function(index, name, str) {
   index.diffs[new_hash] = {prev: prev_hash, patch: patch};
 }
 
+// TODO
+// needed for regenerating wick graph?
+// diff between indices, batch commit
+//  - intersect file lists, check digests, map commitFile
+//  - return changes
+// e.g. diff an ephemeral against its tracker to commit updates
+// commitFiles = function(other-index) {
+// }
+
 module.exports = {
   initIndex: initIndex,
-  buildIndex: buildIndex,
-
-  initFile: initFile,
-  readHead: readHead,
-  commitFile: commitFile,
+  mkTracker: mkTracker,
 }

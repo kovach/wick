@@ -1,4 +1,6 @@
 var _ = require('underscore');
+var d = require('diff');
+
 var doWhile = _.find;
 var done = true;
 
@@ -24,12 +26,12 @@ var locateCursor = function(cm, changes) {
     var lines = change.value.split('\n');
     var delta = lines.length - 1;
     var type = changeType(change);
-    console.log(delta + " : " + type + " : " + JSON.stringify(change.value));
     switch (type) {
       case 'added':
         final_pos.line += delta;
         break;
       case 'removed':
+        // TODO fix this end condition
         if (level + delta > cursor_line) {
           final_pos.ch = 0;
           final_pos.line -= (cursor_line - level);
@@ -48,6 +50,27 @@ var locateCursor = function(cm, changes) {
   });
   return final_pos;
 }
+
+var diffMods = function(f, t) {
+  var changes = d.diffChars(f, t);
+  var mods = getMods(changes);
+  return mods;
+}
+
+var getMods = function(changes) {
+  return _.filter(changes, function(change) {
+    switch (changeType(change)) {
+      case 'added':
+      case 'removed':
+        return true;
+      default:
+        return false;
+    }
+  });
+}
+
 module.exports = {
   locateCursor: locateCursor,
+  getMods: getMods,
+  diffMods: diffMods,
 }

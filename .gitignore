@@ -3,3 +3,4 @@
 *.o
 node_modules/
 *.script
+bundle.js

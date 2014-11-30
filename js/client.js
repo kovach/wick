@@ -5,25 +5,32 @@ var _ = require('underscore');
 var ws;
 
 var parseURL = function() {
-  var m = location.pathname.match(/^\/page\/(\w*)$/);
+  var workspace_regex = /^\/(\w*)\/(\w*)$/;
+  var m = location.pathname.match(workspace_regex);
   if (m) {
-    var page = m[1];
-    console.log(page);
+    var workspace = m[1];
+    var name = m[2];
     var msg = {
-      tag: 'read',
-      data: page
-    }
+      tag: 'workspace',
+      data: {
+        workspace: workspace,
+        name: name,
+      },
+    };
     ws.send(JSON.stringify(msg));
+  } else {
+    console.log('invalid url: ', location.pathname);
   }
 }
+
 var init = function() {
   ws = new WS('ws://'+document.domain+':4444/');
   ws.onopen = function() {
-    console.log('ws open');
     parseURL();
   }
   return ws;
 }
+
 var setHandler = function(handler) {
   ws.onmessage = handler;
 }
