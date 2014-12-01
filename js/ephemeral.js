@@ -1,5 +1,8 @@
 // Same interface as tracker.js, but using a simple index of files
+// Only works for current directory
+// TODO support nested directories
 
+var _ = require('underscore');
 var fs = require('fs');
 var digest = require('./digest');
 var sha256 = digest.sha256;
@@ -20,28 +23,39 @@ var initIndex = function(root) {
 }
 // TODO rename to mkIndex
 var mkTracker = function(root) {
-  this.root = root + '/';
+  return new tracker(root);
 }
-mkTracker.prototype.fileCheck = function(name) {
+var tracker = function(root) {
+  var that = this;
+  that.root = root + '/';
+  that.files = {};
+  var file_names = fs.readdirSync(root);
+  _.each(file_names, function(file_name) {
+    that.files[file_name] = that.current(file_name);
+  });
+}
+tracker.prototype.fileCheck = function(name) {
   return fs.existsSync(fileDir(this.root) + name);
 }
-mkTracker.prototype.initFile = function(name) {
+tracker.prototype.initFile = function(name) {
   fs.writeFile(fileDir(this.root) + name, '');
 }
-mkTracker.prototype.current = function(name) {
+tracker.prototype.current = function(name) {
   var str = fs.readFileSync(fileDir(this.root) + name, opt);
   return sha256(str);
 }
 var opt = {encoding: 'utf8'};
-mkTracker.prototype.readHead = function(name) {
+tracker.prototype.readHead = function(name) {
   return fs.readFileSync(fileDir(this.root) + name, opt);
 }
-mkTracker.prototype.commitFile = function(name, str) {
+// TODO handle subdirectories
+tracker.prototype.commitFile = function(name, str) {
   fs.writeFileSync(fileDir(this.root) + name, str);
 }
 // TODO commitFiles (see tracker.js)
 
 module.exports = {
   initIndex: initIndex,
+  tracker: tracker,
   mkTracker: mkTracker,
 }

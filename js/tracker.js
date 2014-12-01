@@ -37,8 +37,11 @@ var initIndex = function(root) {
   fs.writeFile(diffDir(root) + emptyHash, '');
 }
 
-var opt = {encoding: 'utf8'};
 var mkTracker = function(root) {
+  return new tracker(root);
+}
+var opt = {encoding: 'utf8'};
+var tracker = function(root) {
   var files_prefix = fileDir(root);
   var file_names = fs.readdirSync(files_prefix);
   var files = {};
@@ -69,7 +72,7 @@ var mkTracker = function(root) {
   this.diffs = diffs;
 }
 
-mkTracker.prototype.fileCheck = function(name) {
+tracker.prototype.fileCheck = function(name) {
   var index = this;
   if (index.files[name]) {
     return true;
@@ -77,18 +80,20 @@ mkTracker.prototype.fileCheck = function(name) {
   return false;
 }
 
-mkTracker.prototype.initFile = function(name) {
+tracker.prototype.initFile = function(name) {
   var index = this;
   var ref = emptyHash;
   fs.writeFile(fileDir(index.root)+name, ref);
   index.files[name] = ref;
 }
-mkTracker.prototype.current = function(name) {
+tracker.prototype.current = function(name) {
+  console.log('current');
   return this.files[name];
 }
 
 // Follow diff chain
-mkTracker.prototype.readHead = function(name) {
+tracker.prototype.readHead = function(name) {
+  console.log('readhead');
   var index = this;
   if (!index.fileCheck(name)) {
     console.log("tracker.js:readHead. name doesn't exist: ", name);
@@ -99,6 +104,7 @@ mkTracker.prototype.readHead = function(name) {
   var patches = [];
   var ref = head;
   while (index.diffs[ref].prev !== undefined) {
+    console.log(index.diffs[ref]);
     patches.push(index.diffs[ref].patch);
     ref = index.diffs[ref].prev;
   }
@@ -119,15 +125,21 @@ var parseDiff = function(diff) {
   // return prev, patch
 }
 
-// Calculate diff, commit
-mkTracker.prototype.commitFile = function(name, str) {
+// (if new name, initFile), calculate diff, commit
+tracker.prototype.commitFile = function(name, str) {
+  console.log('commit');
   var index = this;
+  if (!index.fileCheck(name)) {
+    console.log('init file: ', name);
+    index.initFile(name);
+  }
   var prev_str = index.readHead(name);
   var prev_hash = index.files[name];
   if (str === prev_str) {
     console.log('no change from index: ', name);
     return;
   }
+
   var patch = d.createPatch(name, prev_str, str);
   var diff = prev_hash + '\n' + patch;
   var new_hash = sha256(str);
@@ -152,5 +164,6 @@ mkTracker.prototype.commitFile = function(name, str) {
 
 module.exports = {
   initIndex: initIndex,
+  tracker: tracker,
   mkTracker: mkTracker,
 }

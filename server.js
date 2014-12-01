@@ -16,6 +16,7 @@ var http = require('http');
 var util = require('./js/util');
 var t = require('./js/tracker');
 var eph = require('./js/ephemeral');
+var index_util = require('./js/index.js');
 
 // Global state
 var global_root_dir = __dirname + '/pages/';
@@ -25,22 +26,41 @@ var global_index;
 var workspaces = {};
 
 // Initialize repository
-console.log(global_root_dir);
+var init_test_1 = function() {
+  console.log(global_root_dir);
 
-t.initIndex(global_root_dir);
-var global_index = new t.mkTracker(global_root_dir);
-global_index.initFile('a');
-global_index.commitFile('a', 'a');
-global_index.initFile('b');
-global_index.commitFile('b', 'b');
+  t.initIndex(global_root_dir);
+  global_index = t.mkTracker(global_root_dir);
+  global_index.initFile('a');
+  global_index.commitFile('a', 'a');
+  global_index.initFile('b');
+  global_index.commitFile('b', 'b');
 
-// result:
-console.log(global_index);
-console.log(global_index.readHead('a'));
-console.log(global_index.readHead('b'));
+  // result:
+  console.log(global_index);
+  console.log(global_index.readHead('a'));
+  console.log(global_index.readHead('b'));
 
-// End repo init
-// TODO move this? ^
+  // End repo init
+  // TODO move this? ^
+}
+
+var init_test_2 = function() {
+  var temp_index = eph.mkTracker(__dirname + '/temp-repo/');
+  t.initIndex(global_root_dir);
+  global_index = t.mkTracker(global_root_dir);
+  console.log('temp index:\n', temp_index.files);
+  _.each(index_util.getNames(temp_index), function(name) {
+    console.log('init: ', name);
+    global_index.initFile(name);
+  });
+  index_util.commitDiff(global_index, temp_index);
+
+  console.log('global index:\n', global_index);
+  //console.log(global_index.readHead('a'));
+  //console.log(global_index.readHead('b'));
+}
+init_test_2();
 
 //var readPage = function(page, callback) {
 //  var page_dir  =  __dirname + '/pages/';
@@ -63,7 +83,7 @@ var makeWorkspace = function(key) {
   if (!fs.existsSync(root)) {
     fs.mkdirSync(root);
   }
-  index = new eph.mkTracker(root);
+  index = eph.mkTracker(root);
   workspaces[key] = index;
   return index;
 }
@@ -82,7 +102,7 @@ var readWorkingFile = function(index, name) {
   if (!index.fileCheck(name)) {
     var content = global_index.readHead(name);
     if (content) {
-      // TODO this should 'checkout' the file's history
+      // TODO more generally, this could 'checkout' the file's history
       index.commitFile(name, content);
     } else {
       // File doesn't exist in global_index
@@ -205,7 +225,7 @@ var start_server = function() {
   });
 }
 
-start_server();
+//start_server();
 
 
 
