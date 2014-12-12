@@ -5,15 +5,14 @@
 // directory layout:
 // root/
 //   .wick/
-//     files/
-//       'name': [contents = head ref]]
-//     diffs/
-//       'ref': [contents = prev ref/unified diff]
+//     head: (ref of current tree)
+//     index: [(path, hash)]
+//     objects/
+//       'ref': (content of git-style object)
 
 var fs = require('fs');
 var _ = require('underscore');
 var d = require('diff');
-var sha256_ = require('crypto-js/sha256');
 var digest = require('./digest');
 
 var sha256 = digest.sha256;

@@ -97,6 +97,7 @@ var makeMirror = function(id, socket) {
       { value: "function myScript(){return 100;}\n",
         mode:  "javascript",
         matchBrackets: true,
+    // TODO see if copy/paste between different mirrors works well
         //keyMap: "vim",
         keyMap: "default",
         showCursorWhenSelecting: true

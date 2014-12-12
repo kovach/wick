@@ -1,7 +1,3 @@
-/* @flow */
-// TODO copy input version to dir
-// TODO report space usage (and estimated space usage for output?)
-// TODO diff support
 var fs = require('fs');
 var _ = require('underscore');
 var repl = require('repl');
@@ -37,9 +33,3 @@ var main = function() {
 }
 
 main();
-
-//repl.start({
-//    prompt: "→ ",
-//    input: process.stdin,
-//    output: process.stdout
-//});

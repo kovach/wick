@@ -1,2 +1,3 @@
-./parse →wick.def wick.script→
-node →run.js →wick.script
+ghc →Parse.hs -o parse→
+→./parse →wick.def .wick/constructs/core→
+node →run.js
